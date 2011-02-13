@@ -1,0 +1,172 @@
+* {margin:0px;padding:0px;top:0px;left:0px;}
+body{
+	text-align: center;
+	background-color: #44607e;
+}
+#central{
+	margin-right: auto;
+	margin-left: auto;
+	margin-top: 10px;
+	position: relative;
+	width: 777px;
+	text-align: left;
+	background-color: #FFFFFF;
+}
+#header{
+	background-image: url(../images/header.jpg);
+	height: 226px;
+	width: 777px;
+	left: 0px;
+	top: 0px;
+}
+#header a{
+	font-size: 18px;
+	font-style: normal;
+	line-height: normal;
+	font-weight: bolder;
+	color: #FFFFFF;
+	text-decoration: none;
+	margin-left: 112px;
+	font-family: "Courier New", Courier, mono;
+	margin-top: 35px;
+}
+#navlist{
+	margin-left: 0px;
+	padding-left: 0px;
+	white-space: nowrap;
+	position: absolute;
+	height: 27px;
+	width: 777px;
+	top: 225px;
+}
+#navlist li{
+	display: inline;
+	list-style-type: none;
+}
+#navlist a {
+	padding: 3px 10px;
+	background-image: url(../images/button.gif);
+	height: 20px;
+	width: 91px;
+	display: inline;
+	position: absolute;
+	text-align: center;
+	color: #fff;
+	text-decoration: none;
+}
+#navlist a:hover {background-image: url(../images/buttonover.gif);}
+#n1{left: 0px;}
+#n2{left: 111px;}
+#n3{left: 222px;}
+#n4{left: 333px;}
+#n5{left: 444px;}
+#n6{left: 555px;}
+#n7{left: 666px;}
+#leftside{
+	float: left;
+}
+#leftside h3{
+	border-top-width: 3px;
+	border-right-width: 3px;
+	border-bottom-width: 0px;
+	border-left-width: 3px;
+	border-top-style: solid;
+	border-right-style: solid;
+	border-bottom-style: solid;
+	border-left-style: solid;
+	border-top-color: #00306f;
+	border-right-color: #00306f;
+	border-bottom-color: #00306f;
+	border-left-color: #00306f;
+	width:200px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 14px;
+	font-weight: bold;
+	color: #333333;
+	background-color: #FFFFFF;
+	text-align: center;
+	display: block;
+	margin-left: 35px;	
+	margin-top: 35px;	
+}
+#content{
+	margin-top: 252px;
+	position: absolute;
+	width: 777px;
+	background-color: #FFFFFF;
+}
+#picturebox{
+	margin-left: 35px;
+	height: 150px;
+	width: 200px;
+	background-image: url(../images/photoofthemonth.jpg);
+	border: 3px solid #00306f;
+}
+#picture2{	
+	margin-left: 35px;
+	height: 150px;
+	width: 200px;
+	background-image: url(../images/bikeofthemonth.jpg);
+	border: 3px solid #00306f;
+}
+#footer{
+	clear: both;
+	background-color: #FFFFFF;
+	position: relative;
+	height: 46px;
+	background-image: url(../images/footer.gif);
+	background-repeat: no-repeat;
+	background-position: right bottom;
+}
+#rightside{
+	float: right;
+	width: 460px;
+	background-color: #FFFFFF;
+	margin-right: 15px;
+	margin-top: 20px;
+	overflow: hidden;
+}
+#rightside p{
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-weight: normal;
+	color: #666666;
+	margin-left: 0px;
+	margin-bottom: 20px;
+	width: 460px;
+}
+#rightside h1{
+	margin: 10px 0px 10px 0px;
+	width: 300px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 14px;
+	font-weight: bold;
+	color: #033387;
+}
+#rightside span{
+	margin-top: 10px;
+	margin-bottom: 4px;
+	width: 430px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-weight: bold;
+	color: #649721;
+}
+#rightside a{color: #666666;}
+#footer p{
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-weight: bold;
+	color: #FFFFFF;
+	float: right;
+	padding-top: 23px;
+	margin-right: 10px;
+}
+#footer a{color: #fff;}
+#footer a:hover{color: #fff;}
+#imagepreloader{
+	visibility: hidden;
+	overflow: hidden;
+	height: 0px;
+	width: 0px;
+}
