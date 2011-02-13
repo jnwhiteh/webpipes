@@ -1,0 +1,7 @@
+*.[5678vqo]
+*.a
+[5678vq].out
+_obj
+_test
+_testmain.go
+.DS_Store
