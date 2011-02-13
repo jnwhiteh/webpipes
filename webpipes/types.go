@@ -4,6 +4,7 @@ import "bufio"
 import "fmt"
 import "http"
 import "io"
+import "log"
 import "os"
 import "strconv"
 
@@ -159,39 +160,104 @@ func (fn Pipe) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 	return fn(c, req)
 }
 
-// HandlerComponent is a wrapper type that converts an http.Handler into a
-// Component for use in this package. Each Handler is assumed to fill the
-// role of source. This will NOT work if a handler hijacks the response,
-// and will panic accordingly. This is a bit of a 'hack' to ensure we can
-// reuse existing http package code.
+//////////////////////////////////////////////////////////////////////////////
+// ResponseWriter adapter that allows you to use http.Handlers as Components
+// in a webpipes system. This is a rather elaborate wrapper, but gives us the
+// ability to re-use code rather than having to rewrite main functionaly such
+// as serving files, etc.
 //
-// It does not technically violate the http.ResponseWriter interface, it
-// just models it with an infinite buffer that is not written immediately.
-//
-// This type implements the http.ResponseWriter interface, to avoid having
-// yet another wrapper type.
-type HandlerComponent struct {
-	handler http.Handler
-	conn *Conn
-	rwriter http.ResponseWriter
-	cwriter io.WriteCloser
-	done chan bool
-	wroteHeaders bool
+// For the purposes of our code (and sanity) we refer to this as an 'adapter'
+// throughout the package.
+
+type HandlerRWAdapter struct {
+	rwriter http.ResponseWriter // The response writer being wrapped
+	done chan bool              // Channel to signal setup stage completion
+	conn *Conn                  // The connection object (used to set status)
 }
 
-func (hc *HandlerComponent) HandleHTTPRequest(c *Conn, r *http.Request) bool {
+func (adapter *HandlerRWAdapter) RemoteAddr() string {
+	return adapter.rwriter.RemoteAddr()
+}
+
+func (adapter *HandlerRWAdapter) UsingTLS() bool {
+	return adapter.rwriter.UsingTLS()
+}
+
+func (adapter *HandlerRWAdapter) SetHeader(key, value string) {
+	adapter.rwriter.SetHeader(key, value)
+}
+
+func (adapter *HandlerRWAdapter) Hijack() (io.ReadWriteCloser, *bufio.ReadWriter, os.Error) {
+	// This should never happen, if so, developer needs to be notified
+	panic("Handler called 'Hijack' on a HandlerComponent")
+}
+
+// This function is rather odd since it does not actually cause the headers to
+// be written, instead it just signals to the component pipeline that the setup
+// is complete and the next component can proceed. The headers will actually be
+// written in the OutputPipe component in the same way it is always done. This
+// function just signals down the done channel and uses the presence of this
+// channel to indicate whether not this signalling has been done.
+
+func (adapter *HandlerRWAdapter) WriteHeader(status int) {
+	log.Printf("    [%p] WriteHeader was just called", adapter.conn)
+	// This should only ever be called once, log an error message if this isn't the case
+	if adapter.done == nil {
+		log.Print("webpipes: multiple response.WriteHeader calls")
+		return
+	}
+
+	adapter.conn.SetStatus(status)
+	done := adapter.done
+	adapter.done = nil
+	done <- true
+}
+
+func (adapter *HandlerRWAdapter) Write(data []byte) (int, os.Error) {
+	// If we haven't written headers yet, do so
+	if adapter.done != nil {
+		adapter.WriteHeader(http.StatusOK)
+	}
+
+	log.Printf("    [%p] Write called with %d bytes", adapter.conn, len(data))
+
+	return adapter.rwriter.Write(data)
+}
+
+func (adapter *HandlerRWAdapter) Flush() {
+	// If we haven't written headers yet, do so
+	if adapter.done != nil {
+		adapter.WriteHeader(http.StatusOK)
+	}
+	adapter.rwriter.Flush()
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// This is a type definition that allows us to convert an http.Handler into a
+// webpipes.Component so it can be used in pipelines. This utilizes a
+// HandlerRWAdapter to accomplish this.
+//
+// Each Handler is assumed to fill the role of source. This will NOT work if a
+// handler hijacks the response, and will panic accordingly. This is a bit of a
+// 'hack' to ensure we can reuse existing http package code.
+
+
+type HandlerComponent struct {
+	handler http.Handler
+}
+
+func NewHandlerComponent(h http.Handler) *HandlerComponent {
+	hc := &HandlerComponent{handler: h}
+	return hc
+}
+
+func (hc *HandlerComponent) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 	writer := c.NewContentWriter()
 	if writer == nil {
 		// TODO: What should happen here?
 		c.HTTPStatusResponse(http.StatusInternalServerError)
 		return true
 	}
-
-	hc.conn = c
-	hc.rwriter = c.rwriter
-	hc.cwriter = writer
-	hc.done = make(chan bool)
-	hc.wroteHeaders = false
 
 	// Handler logic is as follows:
 	//   1. Set header using SetHeader
@@ -200,59 +266,27 @@ func (hc *HandlerComponent) HandleHTTPRequest(c *Conn, r *http.Request) bool {
 
 	// What we need is actually
 	//   1. Set header using SetHeader
-	//   2. On first write or writeheader, return so next component can proceed
-	//      but ensure that writes happen in a new goroutine.
+	//   2. On first write or writeheader, return from this call so the next
+	//      component can proceed; must ensure that any writes happen in a
+	//      new goroutine.
 
-	// Run the handler in a new goroutine and rely on the specified semantics
-	// to ensure it works properly.
+	adapter := &HandlerRWAdapter{
+		rwriter: c.rwriter,
+		done: make(chan bool),
+		conn: c,
+	}
+
 	go func() {
 		// Run the handler
-		hc.handler.ServeHTTP(hc, r)
-		// At this point we need to close the cwriter
-		hc.cwriter.Close()
+		hc.handler.ServeHTTP(adapter, req)
+		// Writing is done, so close the cwriter
+		writer.Close()
 	}()
 
-	// Wait for either a Write or a WriteHeader, and return. Since the handler is
-	// still running in a separate goroutine, writes will happen as we would expect
-	// them to.
-	<-hc.done
+	// We need to wait for a Write or a WriteHeader on the adapter (which is
+	// being used as the response writer for the handler invocation). Since
+	// the handler is still running in a separate goroutine (the one above),
+	// semantically the content generation is still working properly.
+	<-adapter.done
 	return true
 }
-
-func NewHandlerComponent(h http.Handler) *HandlerComponent {
-	hc := new(HandlerComponent)
-	hc.handler = h
-	return hc
-}
-
-func (hc *HandlerComponent) RemoteAddr() string { return hc.rwriter.RemoteAddr() }
-func (hc *HandlerComponent) UsingTLS() bool { return hc.rwriter.UsingTLS() }
-func (hc *HandlerComponent) SetHeader(key, value string) { hc.rwriter.SetHeader(key, value)}
-
-func (hc *HandlerComponent) Hijack() (io.ReadWriteCloser, *bufio.ReadWriter, os.Error) {
-	// This should never happen, if so, developer needs to be notified
-	panic("Handler called 'Hijack' on a HandlerComponent")
-}
-
-func (hc *HandlerComponent) Write(data []byte) (int, os.Error) {
-	if !hc.wroteHeaders {
-		// The headers need to be written with the appropriate status code
-		hc.WriteHeader(http.StatusOK)
-	}
-
-	return hc.cwriter.Write(data)
-}
-
-func (hc *HandlerComponent) WriteHeader(status int) {
-	hc.conn.status = status
-	hc.wroteHeaders = true
-	hc.done <- true
-}
-
-func (hc *HandlerComponent) Flush() {
-	if !hc.wroteHeaders {
-		hc.WriteHeader(http.StatusOK)
-	}
-	hc.rwriter.Flush()
-}
-

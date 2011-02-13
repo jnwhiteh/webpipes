@@ -15,7 +15,7 @@ func (ch *_ErlangChain) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	for _, component := range ch.components {
 		pass := component.HandleHTTPRequest(conn, req)
 		if !pass {
-			return
+			panic("this should never happen")
 		}
 	}
 }
