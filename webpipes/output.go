@@ -17,23 +17,16 @@ var OutputPipe Pipe = func(conn *Conn, req *http.Request) bool {
 	// Since we have ownership of the Conn object, we can finalize the
 	// response and then write it to the wire
 
-	log.Printf("    [%p] writing headers", conn)
 	conn.rwriter.WriteHeader(conn.status)
 	if conn.body != nil {
-		log.Printf("    [%p] copying", conn)
 		written, err := io.Copy(conn.rwriter, conn.body)
 		if err != nil {
-			log.Printf("Error writing response: %s", err)
 		}
-		log.Printf("    [%p] done copying, err: %s", conn, err)
 		conn.written = written
 		conn.body.Close()
-		log.Printf("    [%p] closing body", conn)
 	}
 
-	log.Printf("    [%p] flushing", conn)
 	conn.rwriter.Flush()
-	log.Printf("    [%p] done flushing", conn)
 	return true
 }
 

@@ -171,6 +171,7 @@ func (fn Pipe) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 
 type HandlerRWAdapter struct {
 	rwriter http.ResponseWriter // The response writer being wrapped
+	cwriter io.WriteCloser      // The channel over which 'writes' must occur
 	done chan bool              // Channel to signal setup stage completion
 	conn *Conn                  // The connection object (used to set status)
 }
@@ -200,7 +201,6 @@ func (adapter *HandlerRWAdapter) Hijack() (io.ReadWriteCloser, *bufio.ReadWriter
 // channel to indicate whether not this signalling has been done.
 
 func (adapter *HandlerRWAdapter) WriteHeader(status int) {
-	log.Printf("    [%p] WriteHeader was just called", adapter.conn)
 	// This should only ever be called once, log an error message if this isn't the case
 	if adapter.done == nil {
 		log.Print("webpipes: multiple response.WriteHeader calls")
@@ -213,15 +213,25 @@ func (adapter *HandlerRWAdapter) WriteHeader(status int) {
 	done <- true
 }
 
+// There is a subtle concurrency bug here with the following sequence of events:
+//
+//   1. File server calls WriteHeader(200)
+//   2. This causes the method above to signal 'Setup phase done'
+//   3. This frees up the file server thread to perform writes.
+//   4. This causes writes to proceed
+//   5. When a write happens before the output pipe has run, it triggers the headers to be written
+//   6. When the output pipe gets the connection, it writes the headers again.
+//
+// This occurred because we were not using the content writer to actually perform the writes,
+// we were using the response writer.. which is bad! 
+
 func (adapter *HandlerRWAdapter) Write(data []byte) (int, os.Error) {
 	// If we haven't written headers yet, do so
 	if adapter.done != nil {
 		adapter.WriteHeader(http.StatusOK)
 	}
 
-	log.Printf("    [%p] Write called with %d bytes", adapter.conn, len(data))
-
-	return adapter.rwriter.Write(data)
+	return adapter.cwriter.Write(data)
 }
 
 func (adapter *HandlerRWAdapter) Flush() {
@@ -272,6 +282,7 @@ func (hc *HandlerComponent) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 
 	adapter := &HandlerRWAdapter{
 		rwriter: c.rwriter,
+		cwriter: writer,
 		done: make(chan bool),
 		conn: c,
 	}
