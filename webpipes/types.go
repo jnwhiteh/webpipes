@@ -94,12 +94,22 @@ func (c *Conn) HTTPStatusResponse(status int) {
 	}(writer, content)
 }
 
-// TODO: Implement this function
+// This function will forcibly close the underlying network connection and shut
+// down the connection object. Once this has been called, the connection and
+// the network should not be used at all
+
 func (c *Conn) Close() {
+	rwc, _, _ := c.Hijack()
+	if rwc != nil {
+		rwc.Close()
+	}
 }
 
-// TODO: Implement this function
-func (c *Conn) Hijack() {
+// Enable a component to break encapsulation and get at the underlying network
+// connections that correspond to the connection.
+
+func (c *Conn) Hijack() (rwc io.ReadWriteCloser, buf *bufio.ReadWriter, err os.Error) {
+	return c.rwriter.Hijack()
 }
 
 // A Component is a type that implements the HandleHTTPRequest method, which
