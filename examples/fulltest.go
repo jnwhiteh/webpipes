@@ -26,6 +26,12 @@ func DebugPipe(prefix string) webpipes.Pipe {
 	}
 }
 
+func LimitNetwork(limit int, components ...webpipes.Component) http.Handler {
+	in := make(chan *webpipes.Conn, limit)
+	out := make(chan *webpipes.Conn, limit)
+	return webpipes.ProcChain(in, out, components...)
+}
+
 func main() {
 	// Debug URLs to reload or restart the system
 	http.Handle("/debug/gc", http.HandlerFunc(GCServer))
@@ -51,15 +57,30 @@ func main() {
 	))
 
 	// Webpipes with Proc chains
-	http.Handle("/webpipe/proc/hello", webpipes.ProcChain(nil, nil,
+	http.Handle("/webpipe/proc/hello", LimitNetwork(500,
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/proc/example/", webpipes.ProcChain(nil, nil,
+	http.Handle("/webpipe/proc/example/", LimitNetwork(500,
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/proc/ipsum.txt", webpipes.ProcChain(nil, nil,
+	http.Handle("/webpipe/proc/ipsum.txt", LimitNetwork(500,
+		webpipes.FileServer("../http-data", "/webpipe/proc"),
+		webpipes.OutputPipe,
+	))
+
+	// Construct a process network that limits the number of concurrent connections
+	// Webpipes with LIMITED Proc chains
+	http.Handle("/webpipe/lproc/hello", webpipes.ProcChain(nil, nil,
+		webpipes.TextStringSource(helloworld),
+		webpipes.OutputPipe,
+	))
+	http.Handle("/webpipe/lproc/example/", webpipes.ProcChain(nil, nil,
+		webpipes.FileServer("../http-data", "/webpipe/proc"),
+		webpipes.OutputPipe,
+	))
+	http.Handle("/webpipe/lproc/ipsum.txt", webpipes.ProcChain(nil, nil,
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
