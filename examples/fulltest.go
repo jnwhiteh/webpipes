@@ -4,6 +4,8 @@ import "fmt"
 import "http"
 import "io"
 import "log"
+import "os"
+import "path"
 import "runtime"
 import "webpipes"
 
@@ -94,6 +96,22 @@ func main() {
 	))
 	http.Handle("/webpipe/lproc/ipsum.txt", webpipes.ProcChain(nil, nil,
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
+		webpipes.OutputPipe,
+	))
+
+	pwd, pwderr := os.Getwd()
+	if pwderr != nil {
+		log.Fatalf("Cannot find pwd: %s", pwderr)
+	}
+
+	cgipath := path.Clean(path.Join(pwd, "../http-data/cgi-bin"))
+	http.Handle("/cgi-bin/", webpipes.ErlangChain(
+		webpipes.CGIDirSource(cgipath, "/cgi-bin"),
+		webpipes.OutputPipe,
+	))
+
+	http.Handle("/wiki/", webpipes.ErlangChain(
+		webpipes.CGISource("/tmp/gorows-sputnik/sputnik.cgi", "/wiki/"),
 		webpipes.OutputPipe,
 	))
 
