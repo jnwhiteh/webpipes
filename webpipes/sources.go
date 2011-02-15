@@ -19,3 +19,11 @@ func TextStringSource(str string) Source {
         return true
 	}
 }
+
+func CGISource(filename, prefix string) Component {
+	return &CGIComponent{filename: filename, prefix: prefix, dir: false}
+}
+
+func CGIDirSource(directory, prefix string) Component {
+	return &CGIComponent{filename: directory, prefix: prefix, dir: true}
+}
