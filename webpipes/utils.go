@@ -112,3 +112,48 @@ func ProcChain(in, out chan *Conn, components ...Component) *_ProcChain {
 	chain.out = next
 	return chain
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// Component network adapter
+//
+// This allows the developer to create a process network to respond to requests
+// and this adapter just listens for new requests in a separate goroutine. When
+// a request arrives, it is injected into the user connected network. This
+// adapter then waits for the same connection to exit the network (via the out
+// channel), which lets the ServeHTTP call return.
+//
+// This is experimental
+
+type _NetworkHandler struct {
+	in chan *Conn
+	out chan *Conn
+	done map[*Conn]chan bool
+}
+
+// Take in an input and an output channel and return an object that fulfills
+// the http.Handler interface
+func NewNetworkHandler(in, out chan *Conn) *_NetworkHandler {
+	nh := &_NetworkHandler{in, out, make(map[*Conn]chan bool)}
+	go nh.Sink()
+	return nh
+}
+
+func (nh *_NetworkHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	conn := NewConn(w, req)
+
+	nh.done[conn] = make(chan bool)
+
+	// Send the connection into the network
+	nh.in <- conn
+
+	// Wait for a response
+	<-nh.done[conn]
+	nh.done[conn] = nil
+
+}
+
+func (nh *_NetworkHandler) Sink() {
+	for conn := range nh.out {
+		nh.done[conn] <- true
+	}
+}
