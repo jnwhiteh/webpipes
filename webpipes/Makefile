@@ -5,6 +5,7 @@ GOFILES=\
 		cgi.go \
 		filters.go \
 		output.go \
+		pipes.go \
 		sources.go \
 		types.go \
 		utils.go \
