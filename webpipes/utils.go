@@ -43,8 +43,8 @@ func (ch *_ProcChain) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// connection has been served, so we can return to the HTTP server.
 	ch.done[conn] = make(chan bool)
 
-	// Send the connection into the network, asychronously
-	go ch.Inject(conn)
+	// Send the connection into the network
+	ch.in <- conn
 
 	// Wait for the connection to come out the other end
 	<-ch.done[conn]
@@ -57,11 +57,6 @@ func (ch *_ProcChain) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// will attempt to re-use the network connection. This means that
 	// currently there is no way for a process chain to DROP a connection.
 	return
-}
-
-// Inject a connection into the process network chain
-func (ch *_ProcChain) Inject(conn *Conn) {
-	ch.in <- conn
 }
 
 // There will be exactly one of these running for every component in
