@@ -60,6 +60,7 @@ func (c *Conn) NewContentReader() io.ReadCloser {
 // overhead should be minimal
 
 func (c *Conn) SetHeader(key, value string) {
+	c.header[key] = value
 	c.rwriter.SetHeader(key, value)
 }
 
