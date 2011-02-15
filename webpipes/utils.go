@@ -82,7 +82,7 @@ func (ch *_ProcChain) Handle(component Component, conn *Conn, out chan *Conn) {
 // Create a chain of processess connected via channels where the input channel
 // is used to receive the incoming request and the output channel is used
 // to send the request back into the main server loop.
-func ProcChain(in, out chan *Conn, components ...Component) *_ProcChain {
+func ProcChainInOut(in, out chan *Conn, components ...Component) (*_ProcChain, chan *Conn, chan *Conn) {
 	if in == nil {
 		in = make(chan *Conn)
 	}
@@ -110,6 +110,11 @@ func ProcChain(in, out chan *Conn, components ...Component) *_ProcChain {
 
 	chain.in = in
 	chain.out = next
+	return chain, in, out
+}
+
+func ProcChain(components ...Component) (*_ProcChain) {
+	chain, _, _ := ProcChainInOut(nil, nil, components...)
 	return chain
 }
 

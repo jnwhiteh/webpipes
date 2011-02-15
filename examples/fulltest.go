@@ -43,7 +43,8 @@ func DebugPipe(prefix string) webpipes.Pipe {
 func LimitNetwork(limit int, components ...webpipes.Component) http.Handler {
 	in := make(chan *webpipes.Conn, limit)
 	out := make(chan *webpipes.Conn, limit)
-	return webpipes.ProcChain(in, out, components...)
+	chain, _, _ := webpipes.ProcChainInOut(in, out, components...)
+	return chain
 }
 
 func main() {
@@ -86,15 +87,15 @@ func main() {
 
 	// Construct a process network that limits the number of concurrent connections
 	// Webpipes with LIMITED Proc chains
-	http.Handle("/webpipe/lproc/hello", webpipes.ProcChain(nil, nil,
+	http.Handle("/webpipe/lproc/hello", webpipes.ProcChain(
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/lproc/example/", webpipes.ProcChain(nil, nil,
+	http.Handle("/webpipe/lproc/example/", webpipes.ProcChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/lproc/ipsum.txt", webpipes.ProcChain(nil, nil,
+	http.Handle("/webpipe/lproc/ipsum.txt", webpipes.ProcChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
