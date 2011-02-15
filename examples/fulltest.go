@@ -116,6 +116,12 @@ func main() {
 		webpipes.OutputPipe,
 	))
 
+	http.Handle("/zip/", webpipes.ErlangChain(
+		webpipes.FileServer("../http-data", "/zip/"),
+		webpipes.CompressionPipe,
+		webpipes.OutputPipe,
+	))
+
 	address := ":12345"
 	log.Printf("Starting test server on %s", address)
 	log.Printf("Running on %d processes\n", runtime.GOMAXPROCS(0))
