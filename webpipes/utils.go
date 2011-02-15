@@ -138,6 +138,12 @@ func NewNetworkHandler(in, out chan *Conn) *_NetworkHandler {
 	return nh
 }
 
+func (nh *_NetworkHandler) Sink() {
+	for conn := range nh.out {
+		nh.done[conn] <- true
+	}
+}
+
 func (nh *_NetworkHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	conn := NewConn(w, req)
 
@@ -150,10 +156,4 @@ func (nh *_NetworkHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	<-nh.done[conn]
 	nh.done[conn] = nil
 
-}
-
-func (nh *_NetworkHandler) Sink() {
-	for conn := range nh.out {
-		nh.done[conn] <- true
-	}
 }
