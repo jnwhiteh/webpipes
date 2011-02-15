@@ -99,6 +99,7 @@ func main() {
 		webpipes.OutputPipe,
 	))
 
+	// CGI Examples
 	pwd, pwderr := os.Getwd()
 	if pwderr != nil {
 		log.Fatalf("Cannot find pwd: %s", pwderr)
