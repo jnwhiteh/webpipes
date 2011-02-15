@@ -1,5 +1,6 @@
 package main
 
+import "fmt"
 import "http"
 import "io"
 import "log"
@@ -14,9 +15,20 @@ func HelloServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func GCServer(w http.ResponseWriter, req *http.Request) {
+	w.SetHeader("Content-Type", "text/plain; charset=utf-8")
+	StatsServer(w, req)
+	io.WriteString(w, "=============================\n")
+	runtime.GC()
+	StatsServer(w, req)
 }
 
-func MemStatsServer(w http.ResponseWriter, req *http.Request) {
+func StatsServer(w http.ResponseWriter, req *http.Request) {
+	stats := runtime.MemStats
+
+	w.SetHeader("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprintf(w, "Total allocated: %d bytes, In-use: %d bytes\n", stats.TotalAlloc, stats.Alloc)
+	fmt.Fprintf(w, "Heap in-use: %d bytes, Number of heap objects: %d\n", stats.HeapAlloc, stats.HeapObjects)
+	fmt.Fprintf(w, "There are %d Goroutines in the system\n", runtime.Goroutines())
 }
 
 func DebugPipe(prefix string) webpipes.Pipe {
@@ -35,7 +47,7 @@ func LimitNetwork(limit int, components ...webpipes.Component) http.Handler {
 func main() {
 	// Debug URLs to reload or restart the system
 	http.Handle("/debug/gc", http.HandlerFunc(GCServer))
-	http.Handle("/debug/memstats", http.HandlerFunc(MemStatsServer))
+	http.Handle("/debug/stats", http.HandlerFunc(StatsServer))
 
 	// Go 'http' package
 	http.Handle("/go/hello", http.HandlerFunc(HelloServer))
