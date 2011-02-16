@@ -123,10 +123,17 @@ func main() {
 		webpipes.OutputPipe,
 	))
 
-	address := ":12345"
-	log.Printf("Starting test server on %s", address)
+	var second int64 = 1e9
+	server := &http.Server{
+		Addr: ":12345",
+		Handler: http.DefaultServeMux,
+		ReadTimeout: 5 * second,
+		WriteTimeout: 5 * second,
+	}
+
+	log.Printf("Starting test server on %s", server.Addr)
 	log.Printf("Running on %d processes\n", runtime.GOMAXPROCS(0))
-	err := http.ListenAndServe(address, nil)
+	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("Error: %s", err.String())
 	}
