@@ -9,8 +9,6 @@ import "path"
 import "runtime"
 import "webpipes"
 
-import _ "http/pprof"
-
 var helloworld string = "Hello, world!\n"
 
 func HelloServer(w http.ResponseWriter, req *http.Request) {
