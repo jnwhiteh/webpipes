@@ -67,18 +67,18 @@ func main() {
 	))
 
 	// Webpipes with Proc chains
-	http.Handle("/webpipe/proc/hello", webpipes.NetworkHandler(webpipes.ProcChain(
+	http.Handle("/webpipe/proc/hello", webpipes.NetworkChain(
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
-	)))
-	http.Handle("/webpipe/proc/example/", webpipes.NetworkHandler(webpipes.ProcChain(
+	))
+	http.Handle("/webpipe/proc/example/", webpipes.NetworkChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
-	)))
-	http.Handle("/webpipe/proc/ipsum.txt", webpipes.NetworkHandler(webpipes.ProcChain(
+	))
+	http.Handle("/webpipe/proc/ipsum.txt", webpipes.NetworkChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
-	)))
+	))
 
 	// CGI Examples
 	pwd, pwderr := os.Getwd()
