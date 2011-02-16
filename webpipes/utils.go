@@ -57,7 +57,7 @@ func ProcChainInOut(in, out chan *Conn, components ...Component) (chan *Conn, ch
 		prev = next
 	}
 
-	return in, out
+	return in, next
 }
 
 // There will be exactly one of these running for every component in each
