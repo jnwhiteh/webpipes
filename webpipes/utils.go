@@ -20,7 +20,7 @@ func (ch *_ErlangChain) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func ErlangChain(components ...Component) *_ErlangChain {
+func Chain(components ...Component) *_ErlangChain {
 	return &_ErlangChain{components}
 }
 
