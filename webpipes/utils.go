@@ -98,12 +98,12 @@ type _NetworkHandler struct {
 
 // Take in an input and an output channel and return an object that fulfills
 // the http.Handler interface
-func NetworkChain(components ...Component) *_NetworkHandler {
+func NetworkHandler(components ...Component) *_NetworkHandler {
 	in, out := ProcNetwork(components...)
-	return NetworkChainInOut(in, out)
+	return NetworkHandlerInOut(in, out)
 }
 
-func NetworkChainInOut(in, out chan *Conn) *_NetworkHandler {
+func NetworkHandlerInOut(in, out chan *Conn) *_NetworkHandler {
 	nh := &_NetworkHandler{in, out, make(map[*Conn]chan bool)}
 	go nh.Sink()
 	return nh

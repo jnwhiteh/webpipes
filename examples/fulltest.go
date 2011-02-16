@@ -56,29 +56,29 @@ func main() {
 	http.Handle("/go/ipsum.txt", http.FileServer("../http-data", "/go"))
 
 	// Webpipes with Erlang chains
-	http.Handle("/webpipe/erlang/hello", webpipes.ErlangChain(
+	http.Handle("/webpipe/erlang/hello", webpipes.Chain(
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/erlang/example/", webpipes.ErlangChain(
+	http.Handle("/webpipe/erlang/example/", webpipes.Chain(
 		webpipes.FileServer("../http-data", "/webpipe/erlang"),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/erlang/ipsum.txt", webpipes.ErlangChain(
+	http.Handle("/webpipe/erlang/ipsum.txt", webpipes.Chain(
 		webpipes.FileServer("../http-data", "/webpipe/erlang"),
 		webpipes.OutputPipe,
 	))
 
 	// Webpipes with Proc chains
-	http.Handle("/webpipe/proc/hello", webpipes.NetworkChain(
+	http.Handle("/webpipe/proc/hello", webpipes.NetworkHandler(
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/proc/example/", webpipes.NetworkChain(
+	http.Handle("/webpipe/proc/example/", webpipes.NetworkHandler(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/proc/ipsum.txt", webpipes.NetworkChain(
+	http.Handle("/webpipe/proc/ipsum.txt", webpipes.NetworkHandler(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
@@ -90,17 +90,17 @@ func main() {
 	}
 
 	cgipath := path.Clean(path.Join(pwd, "../http-data/cgi-bin"))
-	http.Handle("/cgi-bin/", webpipes.ErlangChain(
+	http.Handle("/cgi-bin/", webpipes.Chain(
 		webpipes.CGIDirSource(cgipath, "/cgi-bin"),
 		webpipes.OutputPipe,
 	))
 
-	http.Handle("/wiki/", webpipes.ErlangChain(
+	http.Handle("/wiki/", webpipes.Chain(
 		webpipes.CGISource("/tmp/gorows-sputnik/sputnik.cgi", "/wiki/"),
 		webpipes.OutputPipe,
 	))
 
-	http.Handle("/zip/", webpipes.ErlangChain(
+	http.Handle("/zip/", webpipes.Chain(
 		webpipes.FileServer("../http-data", "/zip/"),
 		webpipes.CompressionPipe,
 		webpipes.OutputPipe,
