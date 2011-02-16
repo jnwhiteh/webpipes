@@ -30,65 +30,14 @@ func ErlangChain(components ...Component) *_ErlangChain {
 // There might be an advantage to writing your servers in this way, where each
 // component has a new goroutine for each incoming request.
 
-type _ProcChain struct {
-	in chan *Conn
-	out chan *Conn
-	done map[*Conn]chan bool
+func ProcNetwork(components ...Component) (chan *Conn, chan *Conn) {
+	return ProcNetworkInOut(nil, nil, components...)
 }
 
-func (ch *_ProcChain) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	conn := NewConn(w, req)
-
-	// Create an entry in the 'done' table so we can be notified when our
-	// connection has been served, so we can return to the HTTP server.
-	ch.done[conn] = make(chan bool)
-
-	// Send the connection into the network
-	ch.in <- conn
-
-	// Wait for the connection to come out the other end
-	<-ch.done[conn]
-	ch.done[conn] = nil
-
-	// TODO: There is no way to 'drop' a connection right now, and this is
-	// probably undesirable.
-
-	// Always return to the http package, where the underlying package
-	// will attempt to re-use the network connection. This means that
-	// currently there is no way for a process chain to DROP a connection.
-	return
-}
-
-// There will be exactly one of these running for every component in
-// each 'ProcChain' structure. This allows them to be re-used as
-// handlers for multiple paths without contention.
-func (ch *_ProcChain) Loop(component Component, in, out chan *Conn) {
-	for conn := range in {
-		go ch.Handle(component, conn, out)
-	}
-}
-
-func (ch *_ProcChain) Handle(component Component, conn *Conn, out chan *Conn) {
-	pass := component.HandleHTTPRequest(conn, conn.Request)
-
-	if out == ch.out {
-		ch.done[conn] <- pass
-		out <- conn
-	} else {
-		out <- conn
-	}
-}
-
-// Create a chain of processess connected via channels where the input channel
-// is used to receive the incoming request and the output channel is used
-// to send the request back into the main server loop.
-func ProcChainInOut(in, out chan *Conn, components ...Component) (*_ProcChain, chan *Conn, chan *Conn) {
+func ProcNetworkInOut(in, out chan *Conn, components ...Component) (chan *Conn, chan *Conn) {
 	if in == nil {
 		in = make(chan *Conn)
 	}
-
-	var chain *_ProcChain = new(_ProcChain)
-	chain.done = make(map[*Conn]chan bool)
 
 	var prev chan *Conn = in
 	var next chan *Conn = out
@@ -103,19 +52,31 @@ func ProcChainInOut(in, out chan *Conn, components ...Component) (*_ProcChain, c
 		}
 
 		// Spawn a server farm process for this component.
-		go chain.Loop(comp, prev, next)
+		go componentLoop(comp, prev, next)
 
 		prev = next
 	}
 
-	chain.in = in
-	chain.out = next
-	return chain, in, out
+	return in, next
 }
 
-func ProcChain(components ...Component) (*_ProcChain) {
-	chain, _, _ := ProcChainInOut(nil, nil, components...)
-	return chain
+// There will be exactly one of these running for every component in each
+// process chain. This allows them to be re-used as handlers for multiple paths
+// without contention.
+func componentLoop(component Component, in, out chan *Conn) {
+	for conn := range in {
+		go componentHandle(component, conn, out)
+	}
+}
+
+func componentHandle(component Component, conn *Conn, out chan *Conn) {
+	pass := component.HandleHTTPRequest(conn, conn.Request)
+
+	if !pass {
+		return
+	}
+
+	out <- conn
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -130,14 +91,19 @@ func ProcChain(components ...Component) (*_ProcChain) {
 // This is experimental
 
 type _NetworkHandler struct {
-	in chan *Conn
-	out chan *Conn
-	done map[*Conn]chan bool
+	in chan *Conn            // the input channel for the entire network
+	out chan *Conn           // the output channel for the entire network
+	done map[*Conn]chan bool // a map for tracking non-finished connections
 }
 
 // Take in an input and an output channel and return an object that fulfills
 // the http.Handler interface
-func NewNetworkHandler(in, out chan *Conn) *_NetworkHandler {
+func NetworkChain(components ...Component) *_NetworkHandler {
+	in, out := ProcNetwork(components...)
+	return NetworkChainInOut(in, out)
+}
+
+func NetworkChainInOut(in, out chan *Conn) *_NetworkHandler {
 	nh := &_NetworkHandler{in, out, make(map[*Conn]chan bool)}
 	go nh.Sink()
 	return nh
@@ -159,6 +125,5 @@ func (nh *_NetworkHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// Wait for a response
 	<-nh.done[conn]
-	nh.done[conn] = nil
-
+	nh.done[conn] = nil, false
 }

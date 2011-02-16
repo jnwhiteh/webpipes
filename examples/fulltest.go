@@ -24,6 +24,10 @@ func GCServer(w http.ResponseWriter, req *http.Request) {
 	StatsServer(w, req)
 }
 
+func ExitServer(w http.ResponseWriter, req *http.Request) {
+	os.Exit(1)
+}
+
 func StatsServer(w http.ResponseWriter, req *http.Request) {
 	stats := runtime.MemStats
 
@@ -40,17 +44,11 @@ func DebugPipe(prefix string) webpipes.Pipe {
 	}
 }
 
-func LimitNetwork(limit int, components ...webpipes.Component) http.Handler {
-	in := make(chan *webpipes.Conn, limit)
-	out := make(chan *webpipes.Conn, limit)
-	chain, _, _ := webpipes.ProcChainInOut(in, out, components...)
-	return chain
-}
-
 func main() {
 	// Debug URLs to reload or restart the system
 	http.Handle("/debug/gc", http.HandlerFunc(GCServer))
 	http.Handle("/debug/stats", http.HandlerFunc(StatsServer))
+	http.Handle("/debug/exit", http.HandlerFunc(ExitServer))
 
 	// Go 'http' package
 	http.Handle("/go/hello", http.HandlerFunc(HelloServer))
@@ -72,30 +70,15 @@ func main() {
 	))
 
 	// Webpipes with Proc chains
-	http.Handle("/webpipe/proc/hello", LimitNetwork(500,
+	http.Handle("/webpipe/proc/hello", webpipes.NetworkChain(
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/proc/example/", LimitNetwork(500,
+	http.Handle("/webpipe/proc/example/", webpipes.NetworkChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/proc/ipsum.txt", LimitNetwork(500,
-		webpipes.FileServer("../http-data", "/webpipe/proc"),
-		webpipes.OutputPipe,
-	))
-
-	// Construct a process network that limits the number of concurrent connections
-	// Webpipes with LIMITED Proc chains
-	http.Handle("/webpipe/lproc/hello", webpipes.ProcChain(
-		webpipes.TextStringSource(helloworld),
-		webpipes.OutputPipe,
-	))
-	http.Handle("/webpipe/lproc/example/", webpipes.ProcChain(
-		webpipes.FileServer("../http-data", "/webpipe/proc"),
-		webpipes.OutputPipe,
-	))
-	http.Handle("/webpipe/lproc/ipsum.txt", webpipes.ProcChain(
+	http.Handle("/webpipe/proc/ipsum.txt", webpipes.NetworkChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
 	))
@@ -123,10 +106,17 @@ func main() {
 		webpipes.OutputPipe,
 	))
 
-	address := ":12345"
-	log.Printf("Starting test server on %s", address)
+	var second int64 = 1e9
+	server := &http.Server{
+		Addr: ":12345",
+		Handler: http.DefaultServeMux,
+		ReadTimeout: 5 * second,
+		WriteTimeout: 5 * second,
+	}
+
+	log.Printf("Starting test server on %s", server.Addr)
 	log.Printf("Running on %d processes\n", runtime.GOMAXPROCS(0))
-	err := http.ListenAndServe(address, nil)
+	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("Error: %s", err.String())
 	}
