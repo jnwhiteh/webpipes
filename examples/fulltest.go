@@ -91,10 +91,22 @@ func main() {
 		webpipes.TextStringSource(helloworld),
 		webpipes.OutputPipe,
 	))
-	http.Handle("/webpipe/lproc/example/", webpipes.ProcChain(
+	expc := webpipes.ProcChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,
-	))
+	)
+	http.Handle("/webpipe/lproc/example/", expc)
+	http.Handle("/debug/pc", http.HandlerFunc(
+		func(w http.ResponseWriter, req *http.Request) {
+			count := 0
+			done := expc.GetDone()
+			w.SetHeader("Content-Type", "text/plain; charset=utf-8")
+			for _, _ = range done {
+				count = count + 1
+			}
+			fmt.Fprintf(w, "There are %d connections waiting\n", count)
+		}))
+
 	http.Handle("/webpipe/lproc/ipsum.txt", webpipes.ProcChain(
 		webpipes.FileServer("../http-data", "/webpipe/proc"),
 		webpipes.OutputPipe,

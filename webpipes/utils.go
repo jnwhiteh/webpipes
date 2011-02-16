@@ -36,6 +36,10 @@ type _ProcChain struct {
 	done map[*Conn]chan bool
 }
 
+func (ch *_ProcChain) GetDone() map[*Conn]chan bool{
+	return ch.done
+}
+
 func (ch *_ProcChain) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	conn := NewConn(w, req)
 
