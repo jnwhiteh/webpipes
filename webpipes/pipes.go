@@ -89,3 +89,12 @@ func AccessLog(logger *log.Logger) Pipe {
 		return true
 	}
 }
+
+// Logs a message to stderr for each connection. The prefix string
+// will be prepended to 
+func DebugPipe(str string, args ...interface{}) Pipe {
+	return func(conn *Conn, req *http.Request) bool {
+		log.Printf(str, args...)
+		return true
+	}
+}
