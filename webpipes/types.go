@@ -55,6 +55,10 @@ func (c *Conn) NewContentReader() io.ReadCloser {
 	return reader
 }
 
+func (c *Conn) RemoteAddr() string {
+	return c.rwriter.RemoteAddr()
+}
+
 // Unfortunately due to non-exported methods in the ResponseWriter, we need to
 // track the state of headers outselves. This duplication is not great, but the
 // overhead should be minimal

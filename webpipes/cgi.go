@@ -303,8 +303,8 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 	envMap["QUERY_STRING"] = req.URL.RawQuery
 
 	// TODO: Verify this is aaa.bbb.ccc.ddd or ipv6 valid address
-	// FIXME: envMap["REMOTE_ADDR"] = conn.RemoteAddr.Host
-	// FIXME: envMap["REMOTE_HOST"] = conn.RemoteAddr.Host
+	envMap["REMOTE_ADDR"] = conn.RemoteAddr() //FIXME
+	envMap["REMOTE_HOST"] = conn.RemoteAddr() //FIXME
 	// REMOTE_IDENT
 	// REMOTE_USER
 	envMap["REQUEST_METHOD"] = req.Method

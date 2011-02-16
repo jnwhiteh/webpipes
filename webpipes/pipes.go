@@ -58,9 +58,7 @@ func SimpleAuth(users map[string]string, realm string, bypass chan<- *Conn) Pipe
 
 func AccessLog(logger *log.Logger) Pipe {
 	return func(conn *Conn, req *http.Request) bool {
-		// FIXME: Need to get the remote hose
-		//var remoteHost = conn.RemoteAddr.Host
-		var remoteHost = "FIXME"
+		var remoteHost = conn.RemoteAddr() // FIXME
 		var ident string = "-"
 		var authuser string = "-"
 		var now *time.Time = time.UTC()
