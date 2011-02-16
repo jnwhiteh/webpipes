@@ -77,7 +77,8 @@ func (ch *_ProcChain) Handle(component Component, conn *Conn, out chan *Conn) {
 
 	if out == ch.out {
 		ch.done[conn] <- pass
-		out <- conn
+		// Previously this code passed the connection out the output channel.
+		// We don't actually want to do that, so drop it here.
 	} else {
 		out <- conn
 	}
