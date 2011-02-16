@@ -24,6 +24,10 @@ func GCServer(w http.ResponseWriter, req *http.Request) {
 	StatsServer(w, req)
 }
 
+func ExitServer(w http.ResponseWriter, req *http.Request) {
+	os.Exit(1)
+}
+
 func StatsServer(w http.ResponseWriter, req *http.Request) {
 	stats := runtime.MemStats
 
@@ -44,6 +48,7 @@ func main() {
 	// Debug URLs to reload or restart the system
 	http.Handle("/debug/gc", http.HandlerFunc(GCServer))
 	http.Handle("/debug/stats", http.HandlerFunc(StatsServer))
+	http.Handle("/debug/exit", http.HandlerFunc(ExitServer))
 
 	// Go 'http' package
 	http.Handle("/go/hello", http.HandlerFunc(HelloServer))
