@@ -12,11 +12,16 @@ import "strconv"
 //
 // ServeHTTP(http.ResponseWriter, *http.Request)
 //
-// In this package, we provide this method for a sequence of components, i.e.
-// sources, pipes and filters. We also provide a way to convert an
-// http.Handler type into one that comforms to our desired semantics. We do
-// this by taking in an http.Handler and providing a new http.ResponseWriter
-// that prevents the write from going directly to the socket.
+// In this package, we provide this method for each of the component chains.
+// We also provide a way to convert an http.Handler type into one that
+// conforms to the two-stage response generation semantics. We do this by
+// taking in an http.Handler and providing a new http.ResponseWriter that
+// prevents the write from going directly to the socket.
+
+
+// The Conn type is the atomic unit that is passed between components, using
+// channels. It also contains the methods that are used to construct the
+// response.
 
 type Conn struct {
 	Request *http.Request
@@ -27,6 +32,8 @@ type Conn struct {
 	written int64
 }
 
+// Constructor for a connection object, used internally by this package but
+// exposed for other implementors.
 func NewConn(rwriter http.ResponseWriter, request *http.Request) *Conn {
 	conn := new(Conn)
 	conn.Request = request
@@ -35,6 +42,7 @@ func NewConn(rwriter http.ResponseWriter, request *http.Request) *Conn {
 	return conn
 }
 
+// Return a new content writer
 func (c *Conn) NewContentWriter() io.WriteCloser {
 	if c.body != nil {
 		// There is a dangling reader that needs to be consumed first
@@ -45,6 +53,7 @@ func (c *Conn) NewContentWriter() io.WriteCloser {
 	return writer
 }
 
+// Return a new content reader
 func (c *Conn) NewContentReader() io.ReadCloser {
 	if c.body == nil {
 		// There is no reader waiting to be consumed
@@ -55,23 +64,27 @@ func (c *Conn) NewContentReader() io.ReadCloser {
 	return reader
 }
 
+// Return the address of the client connection
 func (c *Conn) RemoteAddr() string {
 	return c.rwriter.RemoteAddr()
 }
 
+// Set a header in the eventual response.
+//
 // Unfortunately due to non-exported methods in the ResponseWriter, we need to
-// track the state of headers outselves. This duplication is not great, but the
-// overhead should be minimal
-
+// track the state of headers outselves. This duplication is not great, but
+// until we can get a CL approved to expose them, this is the alternative.
 func (c *Conn) SetHeader(key, value string) {
 	c.header[key] = value
 	c.rwriter.SetHeader(key, value)
 }
 
+// Set the numeric static code of the response
 func (c *Conn) SetStatus(status int) {
 	c.status = status
 }
 
+// Provide a canned HTTP status response, including content body
 func (c *Conn) HTTPStatusResponse(status int) {
 	c.SetHeader("Content-Type", "text/plain; charset=utf-8")
 	c.SetStatus(status)
@@ -103,7 +116,6 @@ func (c *Conn) HTTPStatusResponse(status int) {
 // This function will forcibly close the underlying network connection and shut
 // down the connection object. Once this has been called, the connection and
 // the network should not be used at all
-
 func (c *Conn) Close() {
 	rwc, _, _ := c.Hijack()
 	if rwc != nil {
@@ -113,7 +125,6 @@ func (c *Conn) Close() {
 
 // Enable a component to break encapsulation and get at the underlying network
 // connections that correspond to the connection.
-
 func (c *Conn) Hijack() (rwc io.ReadWriteCloser, buf *bufio.ReadWriter, err os.Error) {
 	return c.rwriter.Hijack()
 }
@@ -134,6 +145,8 @@ type Component interface {
 type Source func(*Conn, *http.Request, io.WriteCloser) bool
 type Filter func(*Conn, *http.Request, io.ReadCloser, io.WriteCloser) bool
 type Pipe func(*Conn, *http.Request) bool
+
+// Utility methods on sources, filters and pipes
 
 func (fn Source) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 	// Allocate a content writer for this source
@@ -228,7 +241,7 @@ func (adapter *HandlerRWAdapter) WriteHeader(status int) {
 //   6. When the output pipe gets the connection, it writes the headers again.
 //
 // This occurred because we were not using the content writer to actually perform the writes,
-// we were using the response writer.. which is bad! 
+// we were using the response writer.. which is bad!
 
 func (adapter *HandlerRWAdapter) Write(data []byte) (int, os.Error) {
 	// If we haven't written headers yet, do so
