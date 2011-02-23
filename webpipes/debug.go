@@ -12,7 +12,7 @@ import "runtime"
 
 type _wrapper struct {
 	writer http.ResponseWriter
-	conn *Conn
+	conn   *Conn
 }
 
 func (wrap *_wrapper) RemoteAddr() string {
@@ -45,4 +45,3 @@ func (wrap *_wrapper) Write(data []byte) (int, os.Error) {
 func (wrap *_wrapper) Flush() {
 	wrap.writer.Flush()
 }
-

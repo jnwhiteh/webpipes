@@ -61,7 +61,7 @@ var IdentityFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCl
 
 var CompressionPipe Pipe = func(conn *Conn, req *http.Request) bool {
 	// TODO: Support HTTP/1.0
-	if req.ProtoAtLeast(1,1) {
+	if req.ProtoAtLeast(1, 1) {
 		// Process "Accept-Encoding" to see if any compressions are valid 
 		header, ok := req.Header["Accept-Encoding"]
 		if !ok || len(header) == 0 {

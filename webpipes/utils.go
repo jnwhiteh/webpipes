@@ -91,8 +91,8 @@ func componentHandle(component Component, conn *Conn, out chan *Conn) {
 // This is experimental
 
 type _NetworkHandler struct {
-	in chan *Conn            // the input channel for the entire network
-	out chan *Conn           // the output channel for the entire network
+	in   chan *Conn          // the input channel for the entire network
+	out  chan *Conn          // the output channel for the entire network
 	done map[*Conn]chan bool // a map for tracking non-finished connections
 }
 

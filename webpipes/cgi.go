@@ -444,8 +444,8 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 // used by the file server in fs.go.
 type CGIComponent struct {
 	filename string
-	prefix string
-	dir bool
+	prefix   string
+	dir      bool
 }
 
 func (cgi *CGIComponent) HandleHTTPRequest(conn *Conn, req *http.Request) bool {

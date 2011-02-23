@@ -21,9 +21,9 @@ import "strconv"
 type Conn struct {
 	Request *http.Request
 	rwriter http.ResponseWriter
-	body io.ReadCloser
-	status int
-	header map[string]string
+	body    io.ReadCloser
+	status  int
+	header  map[string]string
 	written int64
 }
 
@@ -177,8 +177,8 @@ func (fn Pipe) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 type HandlerRWAdapter struct {
 	rwriter http.ResponseWriter // The response writer being wrapped
 	cwriter io.WriteCloser      // The channel over which 'writes' must occur
-	done chan bool              // Channel to signal setup stage completion
-	conn *Conn                  // The connection object (used to set status)
+	done    chan bool           // Channel to signal setup stage completion
+	conn    *Conn               // The connection object (used to set status)
 }
 
 func (adapter *HandlerRWAdapter) RemoteAddr() string {
@@ -288,8 +288,8 @@ func (hc *HandlerComponent) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 	adapter := &HandlerRWAdapter{
 		rwriter: c.rwriter,
 		cwriter: writer,
-		done: make(chan bool),
-		conn: c,
+		done:    make(chan bool),
+		conn:    c,
 	}
 
 	go func() {
