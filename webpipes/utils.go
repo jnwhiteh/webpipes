@@ -3,7 +3,8 @@ package webpipes
 import "http"
 
 //////////////////////////////////////////////////////////////////////////////
-// Erlang-style component chains
+// Erlang-style component chains, where each connection is executed in a
+// goroutine with components being executed sequentially.
 
 type _ErlangChain struct {
 	components []Component
@@ -28,7 +29,8 @@ func Chain(components ...Component) *_ErlangChain {
 // Spawned goroutine networks of components
 //
 // There might be an advantage to writing your servers in this way, where each
-// component has a new goroutine for each incoming request.
+// component has a new goroutine for each incoming request and utilized server
+// farms.
 
 func ProcNetwork(components ...Component) (chan *Conn, chan *Conn) {
 	return ProcNetworkInOut(nil, nil, components...)

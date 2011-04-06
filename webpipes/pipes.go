@@ -7,6 +7,8 @@ import "log"
 import "strings"
 import "time"
 
+// Require simple authentication in order to proceed, otherwise respond with
+// a challenge/denial and send the connection down the 'bypass' channel.
 func SimpleAuth(users map[string]string, realm string, bypass chan<- *Conn) Pipe {
 	return func(conn *Conn, req *http.Request) bool {
 		// Check for the 'Authorization' header and attempt authentication
@@ -56,6 +58,7 @@ func SimpleAuth(users map[string]string, realm string, bypass chan<- *Conn) Pipe
 	}
 }
 
+// Write an CLF formatted access log to 'logger'
 func AccessLog(logger *log.Logger) Pipe {
 	return func(conn *Conn, req *http.Request) bool {
 		var remoteHost = conn.RemoteAddr() // FIXME
@@ -65,8 +68,7 @@ func AccessLog(logger *log.Logger) Pipe {
 		var timestamp string = now.Format("[07/Jan/2006:15:04:05 -0700]")
 		var request string = fmt.Sprintf("%s %s %s", req.Method, req.RawURL, req.Proto)
 		var status int = conn.status
-		// FIXME: Get the size
-		var size int64 = 0
+		var size int64 = conn.written
 		var referer string = "-"
 		var userAgent string = "-"
 
@@ -90,8 +92,7 @@ func AccessLog(logger *log.Logger) Pipe {
 	}
 }
 
-// Logs a message to stderr for each connection. The prefix string
-// will be prepended to 
+// Logs a message to stderr for each connection.
 func DebugPipe(str string, args ...interface{}) Pipe {
 	return func(conn *Conn, req *http.Request) bool {
 		log.Printf(str, args...)

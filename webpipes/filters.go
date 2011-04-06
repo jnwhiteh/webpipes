@@ -30,6 +30,7 @@ func (r13 *rot13Reader) Read(b []byte) (ret int, err os.Error) {
 	return r, e
 }
 
+// Rot13 any alphabetic content in the output stream
 var Rot13Filter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser, writer io.WriteCloser) bool {
 	go func() {
 		rot13 := &rot13Reader{reader}
@@ -41,6 +42,7 @@ var Rot13Filter Filter = func(conn *Conn, req *http.Request, reader io.ReadClose
 	return true
 }
 
+// Perform an identity transformation on the content stream
 var IdentityFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser, writer io.WriteCloser) bool {
 	go func() {
 		io.Copy(writer, reader)
@@ -132,6 +134,7 @@ var CompressionPipe Pipe = func(conn *Conn, req *http.Request) bool {
 	return true
 }
 
+// Perform unconditional 'gzip' compression of the content stream
 var GzipFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser, writer io.WriteCloser) bool {
 	zipw, err := gzip.NewWriter(writer)
 
@@ -151,6 +154,7 @@ var GzipFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser
 	return true
 }
 
+// Perform unconditional 'flate' compression of the content stream
 var FlateFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser, writer io.WriteCloser) bool {
 	zipw := flate.NewWriter(writer, flate.DefaultCompression)
 
