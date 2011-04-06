@@ -13,9 +13,9 @@ func SimpleAuth(users map[string]string, realm string, bypass chan<- *Conn) Pipe
 	return func(conn *Conn, req *http.Request) bool {
 		// Check for the 'Authorization' header and attempt authentication
 		var authenticated bool = false
-		authData, ok := req.Header["Authorization"]
+		authData := req.Header.Get("Authorization")
 
-		if ok {
+		if len(authData) > 0 {
 			fields := strings.Fields(authData)
 			if len(fields) == 2 && fields[0] == "Basic" {
 				b64data := fields[1]
@@ -61,7 +61,7 @@ func SimpleAuth(users map[string]string, realm string, bypass chan<- *Conn) Pipe
 // Write an CLF formatted access log to 'logger'
 func AccessLog(logger *log.Logger) Pipe {
 	return func(conn *Conn, req *http.Request) bool {
-		var remoteHost = conn.RemoteAddr() // FIXME
+		var remoteHost = req.RemoteAddr // FIXME
 		var ident string = "-"
 		var authuser string = "-"
 		var now *time.Time = time.UTC()

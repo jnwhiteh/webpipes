@@ -26,13 +26,15 @@ var OutputPipe Pipe = func(conn *Conn, req *http.Request) bool {
 		conn.body.Close()
 	}
 
-	conn.rwriter.Flush()
+	if flusher, ok := conn.rwriter.(http.Flusher); ok{
+		flusher.Flush()
+	}
 	return true
 }
 
 // An OutputPipe that checks for the presence of HTTP/1.0 and the Connection
 // header to determine if the Content-length header needs to be set. If so, the
-// content is buffered, counted, then output. 
+// content is buffered, counted, then output.
 
 var HTTP10KeepaliveOutputPipe Pipe = func(conn *Conn, req *http.Request) bool {
 	// When we are reached, there will be a pipeline of content readers
@@ -46,7 +48,7 @@ var HTTP10KeepaliveOutputPipe Pipe = func(conn *Conn, req *http.Request) bool {
 		if req.ProtoMajor == 1 && req.ProtoMinor == 0 {
 			// Check to see if the response has a 'Connection' header set
 			// to keep-alive.
-			if conn.header["Connection"] == "keep-alive" {
+			if conn.GetHeader("Connection") == "keep-alive" {
 				buf := bytes.NewBuffer(nil)
 				n, err := io.Copy(buf, conn.body)
 				if err != nil {
@@ -72,6 +74,8 @@ var HTTP10KeepaliveOutputPipe Pipe = func(conn *Conn, req *http.Request) bool {
 		conn.body.Close()
 	}
 
-	conn.rwriter.Flush()
+	if flusher, ok := conn.rwriter.(http.Flusher); ok{
+		flusher.Flush()
+	}
 	return true
 }

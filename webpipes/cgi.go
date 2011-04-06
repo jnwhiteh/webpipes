@@ -243,10 +243,10 @@ Malformed:
 //	Pragma: no-cache
 // like
 //	Cache-Control: no-cache
-func fixPragmaCacheControl(header map[string]string) {
-	if header["Pragma"] == "no-cache" {
-		if _, presentcc := header["Cache-Control"]; !presentcc {
-			header["Cache-Control"] = "no-cache"
+func fixPragmaCacheControl(conn *Conn) {
+	if conn.GetHeader("Pragma") == "no-cache" {
+		if conn.GetHeader("Cache-Control") == "" {
+			conn.SetHeader("Cache-Control", "no-cache")
 		}
 	}
 }
@@ -282,7 +282,7 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 	// TODO: Currently we only handle Content-Length, need to handle chunked
 	// encoding, etc.
 	var contentLength int64 = 0
-	if hdr, ok := req.Header["Content-Length"]; ok {
+	if hdr := req.Header.Get("Content-Length"); len(hdr) > 0 {
 		var err os.Error
 		if contentLength, err = strconv.Atoi64(hdr); err != nil {
 			conn.HTTPStatusResponse(http.StatusInternalServerError)
@@ -291,7 +291,7 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 		}
 
 		envMap["CONTENT_LENGTH"] = hdr
-		envMap["CONTENT_TYPE"] = req.Header["Content-Type"]
+		envMap["CONTENT_TYPE"] = req.Header.Get("Content-Type") // FIXME: Conjoin headers?
 	}
 
 	envMap["GATEWAY_INTERFACE"] = "CGI/1.1"
@@ -303,8 +303,8 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 	envMap["QUERY_STRING"] = req.URL.RawQuery
 
 	// TODO: Verify this is aaa.bbb.ccc.ddd or ipv6 valid address
-	envMap["REMOTE_ADDR"] = conn.RemoteAddr() //FIXME
-	envMap["REMOTE_HOST"] = conn.RemoteAddr() //FIXME
+	envMap["REMOTE_ADDR"] = req.RemoteAddr //FIXME
+	envMap["REMOTE_HOST"] = req.RemoteAddr //FIXME
 	// REMOTE_IDENT
 	// REMOTE_USER
 	envMap["REQUEST_METHOD"] = req.Method
@@ -318,7 +318,7 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 	// Protocol specific environment variables
 	// HTTP_ACCEPT
 	envMap["HTTP_USER_AGENT"] = req.UserAgent
-	if cookie, ok := req.Header["Cookie"]; ok {
+	if cookie := req.Header.Get("Cookie"); len(cookie) > 0 { // FIXME: Multiple headers
 		envMap["HTTP_COOKIE"] = cookie
 	}
 
@@ -373,8 +373,8 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 		conn.SetHeader(key, value)
 	}
 
-	status, ok := conn.header["Status"]
-	if !ok {
+	status := conn.GetHeader("Status")
+	if status == "" {
 		// Use 200 OK as the default status code
 		conn.SetStatus(http.StatusOK)
 	} else {
@@ -406,14 +406,14 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 
 	// TODO: Set or adjust the charset if necessary
 	// Check to see if Content-Type was set
-	_, ok = conn.header["Content-Type"]
-	if !ok {
+	ctype := conn.GetHeader("Content-Type")
+	if ctype == "" {
 		conn.HTTPStatusResponse(http.StatusInternalServerError)
 		fmt.Printf("\n500: No Content-Type specified")
 		return true
 	}
 
-	fixPragmaCacheControl(conn.header)
+	fixPragmaCacheControl(conn)
 
 	// TODO: This is inefficient, especially for large responses
 	// Read in the remainder of the response using io.Copy

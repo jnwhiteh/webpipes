@@ -28,7 +28,6 @@ type Conn struct {
 	rwriter http.ResponseWriter
 	body    io.ReadCloser
 	status  int
-	header  map[string]string
 	written int64
 }
 
@@ -38,7 +37,6 @@ func NewConn(rwriter http.ResponseWriter, request *http.Request) *Conn {
 	conn := new(Conn)
 	conn.Request = request
 	conn.rwriter = rwriter
-	conn.header = make(map[string]string)
 	return conn
 }
 
@@ -64,19 +62,17 @@ func (c *Conn) NewContentReader() io.ReadCloser {
 	return reader
 }
 
-// Return the address of the client connection
-func (c *Conn) RemoteAddr() string {
-	return c.rwriter.RemoteAddr()
-}
-
 // Set a header in the eventual response.
 //
 // Unfortunately due to non-exported methods in the ResponseWriter, we need to
 // track the state of headers outselves. This duplication is not great, but
 // until we can get a CL approved to expose them, this is the alternative.
 func (c *Conn) SetHeader(key, value string) {
-	c.header[key] = value
-	c.rwriter.SetHeader(key, value)
+	c.rwriter.Header().Set(key, value)
+}
+
+func (c *Conn) GetHeader(key string) (string) {
+	return c.rwriter.Header().Get(key)
 }
 
 // Set the numeric static code of the response
@@ -126,7 +122,10 @@ func (c *Conn) Close() {
 // Enable a component to break encapsulation and get at the underlying network
 // connections that correspond to the connection.
 func (c *Conn) Hijack() (rwc io.ReadWriteCloser, buf *bufio.ReadWriter, err os.Error) {
-	return c.rwriter.Hijack()
+	if hijacker, ok := c.rwriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, os.NewError("Response Writer was not an http.Hijacker")
 }
 
 // A Component is a type that implements the HandleHTTPRequest method, which
@@ -186,6 +185,8 @@ func (fn Pipe) HandleHTTPRequest(c *Conn, req *http.Request) bool {
 //
 // For the purposes of our code (and sanity) we refer to this as an 'adapter'
 // throughout the package.
+//
+// This adapter implements the http.ResponseWriter interface
 
 type HandlerRWAdapter struct {
 	rwriter http.ResponseWriter // The response writer being wrapped
@@ -194,41 +195,10 @@ type HandlerRWAdapter struct {
 	conn    *Conn               // The connection object (used to set status)
 }
 
-func (adapter *HandlerRWAdapter) RemoteAddr() string {
-	return adapter.rwriter.RemoteAddr()
-}
+var _ http.ResponseWriter = &HandlerRWAdapter{}
 
-func (adapter *HandlerRWAdapter) UsingTLS() bool {
-	return adapter.rwriter.UsingTLS()
-}
-
-func (adapter *HandlerRWAdapter) SetHeader(key, value string) {
-	adapter.rwriter.SetHeader(key, value)
-}
-
-func (adapter *HandlerRWAdapter) Hijack() (io.ReadWriteCloser, *bufio.ReadWriter, os.Error) {
-	// This should never happen, if so, developer needs to be notified
-	panic("Handler called 'Hijack' on a HandlerComponent")
-}
-
-// This function is rather odd since it does not actually cause the headers to
-// be written, instead it just signals to the component pipeline that the setup
-// is complete and the next component can proceed. The headers will actually be
-// written in the OutputPipe component in the same way it is always done. This
-// function just signals down the done channel and uses the presence of this
-// channel to indicate whether not this signalling has been done.
-
-func (adapter *HandlerRWAdapter) WriteHeader(status int) {
-	// This should only ever be called once, log an error message if this isn't the case
-	if adapter.done == nil {
-		log.Print("webpipes: multiple response.WriteHeader calls")
-		return
-	}
-
-	adapter.conn.SetStatus(status)
-	done := adapter.done
-	adapter.done = nil
-	done <- true
+func (adapter *HandlerRWAdapter) Header() http.Header {
+	return adapter.rwriter.Header()
 }
 
 // There is a subtle concurrency bug here with the following sequence of events:
@@ -252,12 +222,24 @@ func (adapter *HandlerRWAdapter) Write(data []byte) (int, os.Error) {
 	return adapter.cwriter.Write(data)
 }
 
-func (adapter *HandlerRWAdapter) Flush() {
-	// If we haven't written headers yet, do so
-	if adapter.done != nil {
-		adapter.WriteHeader(http.StatusOK)
+// This function is rather odd since it does not actually cause the headers to
+// be written, instead it just signals to the component pipeline that the setup
+// is complete and the next component can proceed. The headers will actually be
+// written in the OutputPipe component in the same way it is always done. This
+// function just signals down the done channel and uses the presence of this
+// channel to indicate whether not this signalling has been done.
+
+func (adapter *HandlerRWAdapter) WriteHeader(status int) {
+	// This should only ever be called once, log an error message if this isn't the case
+	if adapter.done == nil {
+		log.Print("webpipes: multiple response.WriteHeader calls")
+		return
 	}
-	adapter.rwriter.Flush()
+
+	adapter.conn.SetStatus(status)
+	done := adapter.done
+	adapter.done = nil
+	done <- true
 }
 
 //////////////////////////////////////////////////////////////////////////////

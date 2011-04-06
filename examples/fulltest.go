@@ -12,12 +12,12 @@ import "webpipes"
 var helloworld string = "Hello, world!\n"
 
 func HelloServer(w http.ResponseWriter, req *http.Request) {
-	w.SetHeader("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	io.WriteString(w, helloworld)
 }
 
 func GCServer(w http.ResponseWriter, req *http.Request) {
-	w.SetHeader("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	StatsServer(w, req)
 	io.WriteString(w, "=============================\n")
 	runtime.GC()
@@ -31,7 +31,7 @@ func ExitServer(w http.ResponseWriter, req *http.Request) {
 func StatsServer(w http.ResponseWriter, req *http.Request) {
 	stats := runtime.MemStats
 
-	w.SetHeader("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "Total allocated: %d bytes, In-use: %d bytes\n", stats.TotalAlloc, stats.Alloc)
 	fmt.Fprintf(w, "Heap in-use: %d bytes, Number of heap objects: %d\n", stats.HeapAlloc, stats.HeapObjects)
 	fmt.Fprintf(w, "There are %d Goroutines in the system\n", runtime.Goroutines())
