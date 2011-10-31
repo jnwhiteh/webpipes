@@ -27,7 +27,7 @@ func SimpleAuth(users map[string]string, realm string, bypass chan<- *Conn) Pipe
 				// If decoding was successful
 				if err == nil && n > 0 {
 					data := string(data[0:n])
-					subStrings := strings.Split(data, ":", 2)
+					subStrings := strings.SplitN(data, ":", 2)
 
 					if len(subStrings) == 2 {
 						username, password := subStrings[0], subStrings[1]
@@ -72,12 +72,12 @@ func AccessLog(logger *log.Logger) Pipe {
 		var referer string = "-"
 		var userAgent string = "-"
 
-		if len(req.Referer) > 0 {
-			referer = req.Referer
+		if len(req.Referer()) > 0 {
+			referer = req.Referer()
 		}
 
-		if len(req.UserAgent) > 0 {
-			userAgent = req.UserAgent
+		if len(req.UserAgent()) > 0 {
+			userAgent = req.UserAgent()
 		}
 
 		// Spawn a new goroutine to perform the actual print to the logfile

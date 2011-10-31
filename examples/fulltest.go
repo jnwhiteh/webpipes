@@ -52,8 +52,8 @@ func main() {
 
 	// Go 'http' package
 	http.Handle("/go/hello", http.HandlerFunc(HelloServer))
-	http.Handle("/go/example/", http.FileServer("../http-data", "/go"))
-	http.Handle("/go/ipsum.txt", http.FileServer("../http-data", "/go"))
+	http.Handle("/go/example/", http.StripPrefix("/go", http.FileServer(http.Dir("../http-data"))))
+	http.Handle("/go/ipsum.txt", http.StripPrefix("/go", http.FileServer(http.Dir("../http-data"))))
 
 	// Webpipes with Erlang chains
 	http.Handle("/webpipe/erlang/hello", webpipes.Chain(
@@ -90,13 +90,17 @@ func main() {
 	}
 
 	cgipath := path.Clean(path.Join(pwd, "../http-data/cgi-bin"))
-	http.Handle("/cgi-bin/", webpipes.Chain(
-		webpipes.CGIDirSource(cgipath, "/cgi-bin"),
-		webpipes.OutputPipe,
-	))
+
+	cgiscripts := []string{"echo_post.py", "hello.py", "printenv.py", "test.sh"}
+	for _, script := range cgiscripts {
+		http.Handle(path.Join("/cgi-bin", script), webpipes.Chain(
+			webpipes.CGIServer(path.Join(cgipath, script), "/cgi-bin/"),
+			webpipes.OutputPipe,
+		))
+	}
 
 	http.Handle("/wiki/", webpipes.Chain(
-		webpipes.CGISource("/tmp/gorows-sputnik/sputnik.cgi", "/wiki/"),
+		webpipes.CGIServer("/tmp/gorows-sputnik/sputnik.cgi", "/wiki/"),
 		webpipes.OutputPipe,
 	))
 
@@ -106,12 +110,12 @@ func main() {
 		webpipes.OutputPipe,
 	))
 
-	var second int64 = 1e9
+//	var second int64 = 1e9
 	server := &http.Server{
 		Addr: ":12345",
 		Handler: http.DefaultServeMux,
-		ReadTimeout: 5 * second,
-		WriteTimeout: 5 * second,
+//		ReadTimeout: 5 * second,
+//		WriteTimeout: 5 * second,
 	}
 
 	log.Printf("Starting test server on %s", server.Addr)

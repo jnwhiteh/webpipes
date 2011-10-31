@@ -1,11 +1,22 @@
 package webpipes
 
 import "http"
+import "http/cgi"
 import "io"
 
 // Serve files from 'root', stripping 'prefix' from the URL being requested
 func FileServer(root, prefix string) Component {
-	return NewHandlerComponent(http.FileServer(root, prefix))
+	handler := http.StripPrefix(prefix, http.FileServer(http.Dir(root)))
+	return NewHandlerComponent(handler)
+}
+
+// Serve a CGI application 'path', stripping 'prefix' from the URL being
+// requested
+func CGIServer(path, prefix string) Component {
+	handler := new(cgi.Handler)
+	handler.Path = path
+	handler.Root = prefix
+	return NewHandlerComponent(handler)
 }
 
 // Respond with a string as text/plain output
@@ -20,14 +31,4 @@ func TextStringSource(str string) Source {
 
 		return true
 	}
-}
-
-// Serve a CGI script 'filename', stripping 'prefix' from the URL
-func CGISource(filename, prefix string) Component {
-	return &CGIComponent{filename: filename, prefix: prefix, dir: false}
-}
-
-// Serve CGI scripts from 'directory', stripping 'prefix' from the URL
-func CGIDirSource(directory, prefix string) Component {
-	return &CGIComponent{filename: directory, prefix: prefix, dir: true}
 }

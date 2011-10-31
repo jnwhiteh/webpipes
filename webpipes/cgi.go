@@ -57,7 +57,7 @@ func join(elem ...string) string {
 // returning the FileInfo structure, the path to the found file, and the
 // remainder of the URL path that was not used.
 func TranslatePath(url string, base string, symlink bool) (*os.FileInfo, string, string) {
-	var urlSplit = strings.Split(url, "/", -1)
+	var urlSplit = strings.Split(url, "/")
 	var current = base
 
 	// Step through the url directory by directory until you can't proceed
@@ -105,16 +105,16 @@ func TranslatePath(url string, base string, symlink bool) (*os.FileInfo, string,
 // Implementation taken from src/pkg/http/request.go
 
 type ProtocolError struct {
-	os.ErrorString
+	os.Error
 }
 
 var (
-	ErrLineTooLong          = &ProtocolError{"header line too long"}
-	ErrHeaderTooLong        = &ProtocolError{"header too long"}
-	ErrShortBody            = &ProtocolError{"entity body too short"}
-	ErrNotSupported         = &ProtocolError{"feature not supported"}
-	ErrUnexpectedTrailer    = &ProtocolError{"trailer header without chunked transfer encoding"}
-	ErrMissingContentLength = &ProtocolError{"missing ContentLength in HEAD response"}
+	ErrLineTooLong          = &ProtocolError{os.NewError("header line too long")}
+	ErrHeaderTooLong        = &ProtocolError{os.NewError("header too long")}
+	ErrShortBody            = &ProtocolError{os.NewError("entity body too short")}
+	ErrNotSupported         = &ProtocolError{os.NewError("feature not supported")}
+	ErrUnexpectedTrailer    = &ProtocolError{os.NewError("trailer header without chunked transfer encoding")}
+	ErrMissingContentLength = &ProtocolError{os.NewError("missing ContentLength in HEAD response")}
 )
 
 type badStringError struct {
@@ -317,7 +317,7 @@ func ExecCGI(filename, scriptName, pathInfo string, conn *Conn, req *http.Reques
 
 	// Protocol specific environment variables
 	// HTTP_ACCEPT
-	envMap["HTTP_USER_AGENT"] = req.UserAgent
+	envMap["HTTP_USER_AGENT"] = req.UserAgent()
 	if cookie := req.Header.Get("Cookie"); len(cookie) > 0 { // FIXME: Multiple headers
 		envMap["HTTP_COOKIE"] = cookie
 	}

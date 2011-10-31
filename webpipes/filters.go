@@ -73,7 +73,7 @@ var CompressionPipe Pipe = func(conn *Conn, req *http.Request) bool {
 
 		// Generate a map from encodingType -> qvalue (hardcoded to 1.0)
 		encMap := make(map[string]float64)
-		encValues := strings.Split(header, ",", -1)
+		encValues := strings.Split(header, ",")
 
 		for _, encValue := range encValues {
 			var qVal string

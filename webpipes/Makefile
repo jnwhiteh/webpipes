@@ -2,7 +2,6 @@ include $(GOROOT)/src/Make.inc
 
 TARG=webpipes
 GOFILES=\
-		cgi.go \
 		filters.go \
 		output.go \
 		pipes.go \
