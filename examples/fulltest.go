@@ -1,13 +1,13 @@
 package main
 
 import "fmt"
-import "http"
+import "net/http"
 import "io"
 import "log"
 import "os"
 import "path"
 import "runtime"
-import "webpipes"
+import "github.com/jnwhiteh/webpipes"
 
 var helloworld string = "Hello, world!\n"
 
@@ -29,12 +29,13 @@ func ExitServer(w http.ResponseWriter, req *http.Request) {
 }
 
 func StatsServer(w http.ResponseWriter, req *http.Request) {
-	stats := runtime.MemStats
+	stats := new(runtime.MemStats)
+	runtime.ReadMemStats(stats)
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "Total allocated: %d bytes, In-use: %d bytes\n", stats.TotalAlloc, stats.Alloc)
 	fmt.Fprintf(w, "Heap in-use: %d bytes, Number of heap objects: %d\n", stats.HeapAlloc, stats.HeapObjects)
-	fmt.Fprintf(w, "There are %d Goroutines in the system\n", runtime.Goroutines())
+	fmt.Fprintf(w, "There are %d Goroutines in the system\n", runtime.NumGoroutine())
 }
 
 func DebugPipe(prefix string) webpipes.Pipe {
@@ -110,18 +111,18 @@ func main() {
 		webpipes.OutputPipe,
 	))
 
-//	var second int64 = 1e9
+	//	var second int64 = 1e9
 	server := &http.Server{
-		Addr: ":12345",
+		Addr:    ":12345",
 		Handler: http.DefaultServeMux,
-//		ReadTimeout: 5 * second,
-//		WriteTimeout: 5 * second,
+		//		ReadTimeout: 5 * second,
+		//		WriteTimeout: 5 * second,
 	}
 
 	log.Printf("Starting test server on %s", server.Addr)
 	log.Printf("Running on %d processes\n", runtime.GOMAXPROCS(0))
 	err := server.ListenAndServe()
 	if err != nil {
-		log.Fatalf("Error: %s", err.String())
+		log.Fatalf("Error: %s", err)
 	}
 }
