@@ -18,18 +18,18 @@ Dynamic Process Networks in Go". You can find a copy of this paper on the
 
 You can goinstall the package by running:
 
-     goinstall -u -v github.com/jnwhiteh/webpipes/webpipes
+     go get -u -v github.com/jnwhiteh/webpipes
 
 Once the package is installed you can import it using the same path:
 
-     import github.com/jnwhiteh/webpipes/webpipes
+     import github.com/jnwhiteh/webpipes
 
 A "Hello World" server might look like this:
 
      package main
      
-     import "github.com/jnwhiteh/webpipes/webpipes"
-     import "http"
+     import "github.com/jnwhiteh/webpipes"
+     import "net/http"
      import "log"
      
      func main() {
