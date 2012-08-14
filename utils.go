@@ -1,6 +1,6 @@
 package webpipes
 
-import "http"
+import "net/http"
 
 //////////////////////////////////////////////////////////////////////////////
 // Erlang-style component chains, where each connection is executed in a
@@ -127,5 +127,5 @@ func (nh *_NetworkHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// Wait for a response
 	<-nh.done[conn]
-	nh.done[conn] = nil, false
+	delete(nh.done, conn)
 }

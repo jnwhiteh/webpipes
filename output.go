@@ -2,7 +2,7 @@ package webpipes
 
 import "bytes"
 import "fmt"
-import "http"
+import "net/http"
 import "io"
 import "log"
 

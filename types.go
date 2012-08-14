@@ -1,11 +1,14 @@
 package webpipes
 
-import "bufio"
+import (
+	"bufio"
+	"errors"
+)
 import "fmt"
-import "http"
+import "net/http"
 import "io"
 import "log"
-import "os"
+
 import "strconv"
 
 // The http package requires that every http.Handler provide a single method:
@@ -17,7 +20,6 @@ import "strconv"
 // conforms to the two-stage response generation semantics. We do this by
 // taking in an http.Handler and providing a new http.ResponseWriter that
 // prevents the write from going directly to the socket.
-
 
 // The Conn type is the atomic unit that is passed between components, using
 // channels. It also contains the methods that are used to construct the
@@ -71,7 +73,7 @@ func (c *Conn) SetHeader(key, value string) {
 	c.rwriter.Header().Set(key, value)
 }
 
-func (c *Conn) GetHeader(key string) (string) {
+func (c *Conn) GetHeader(key string) string {
 	return c.rwriter.Header().Get(key)
 }
 
@@ -121,11 +123,11 @@ func (c *Conn) Close() {
 
 // Enable a component to break encapsulation and get at the underlying network
 // connections that correspond to the connection.
-func (c *Conn) Hijack() (rwc io.ReadWriteCloser, buf *bufio.ReadWriter, err os.Error) {
+func (c *Conn) Hijack() (rwc io.ReadWriteCloser, buf *bufio.ReadWriter, err error) {
 	if hijacker, ok := c.rwriter.(http.Hijacker); ok {
 		return hijacker.Hijack()
 	}
-	return nil, nil, os.NewError("Response Writer was not an http.Hijacker")
+	return nil, nil, errors.New("Response Writer was not an http.Hijacker")
 }
 
 // A Component is a type that implements the HandleHTTPRequest method, which
@@ -213,7 +215,7 @@ func (adapter *HandlerRWAdapter) Header() http.Header {
 // This occurred because we were not using the content writer to actually perform the writes,
 // we were using the response writer.. which is bad!
 
-func (adapter *HandlerRWAdapter) Write(data []byte) (int, os.Error) {
+func (adapter *HandlerRWAdapter) Write(data []byte) (int, error) {
 	// If we haven't written headers yet, do so
 	if adapter.done != nil {
 		adapter.WriteHeader(http.StatusOK)
@@ -250,7 +252,6 @@ func (adapter *HandlerRWAdapter) WriteHeader(status int) {
 // Each Handler is assumed to fill the role of source. This will NOT work if a
 // handler hijacks the response, and will panic accordingly. This is a bit of a
 // 'hack' to ensure we can reuse existing http package code.
-
 
 type HandlerComponent struct {
 	handler http.Handler

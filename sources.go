@@ -1,7 +1,7 @@
 package webpipes
 
-import "http"
-import "http/cgi"
+import "net/http"
+import "net/http/cgi"
 import "io"
 
 // Serve files from 'root', stripping 'prefix' from the URL being requested

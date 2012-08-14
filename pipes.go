@@ -2,7 +2,7 @@ package webpipes
 
 import "encoding/base64"
 import "fmt"
-import "http"
+import "net/http"
 import "log"
 import "strings"
 import "time"
@@ -64,9 +64,9 @@ func AccessLog(logger *log.Logger) Pipe {
 		var remoteHost = req.RemoteAddr // FIXME
 		var ident string = "-"
 		var authuser string = "-"
-		var now *time.Time = time.UTC()
+		var now time.Time = time.Now().UTC()
 		var timestamp string = now.Format("[07/Jan/2006:15:04:05 -0700]")
-		var request string = fmt.Sprintf("%s %s %s", req.Method, req.RawURL, req.Proto)
+		var request string = fmt.Sprintf("%s %s %s", req.Method, req.URL, req.Proto)
 		var status int = conn.status
 		var size int64 = conn.written
 		var referer string = "-"

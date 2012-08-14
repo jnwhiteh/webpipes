@@ -2,9 +2,9 @@ package webpipes
 
 import "compress/gzip"
 import "compress/flate"
-import "http"
 import "io"
-import "os"
+import "net/http"
+
 import "strconv"
 import "strings"
 
@@ -22,7 +22,7 @@ type rot13Reader struct {
 	source io.Reader
 }
 
-func (r13 *rot13Reader) Read(b []byte) (ret int, err os.Error) {
+func (r13 *rot13Reader) Read(b []byte) (ret int, err error) {
 	r, e := r13.source.Read(b)
 	for i := 0; i < r; i++ {
 		b[i] = rot13(b[i])
@@ -88,7 +88,7 @@ var CompressionPipe Pipe = func(conn *Conn, req *http.Request) bool {
 			var encType string = strings.ToLower(strings.TrimSpace(encValue))
 			var quality float64
 
-			if qnum, err := strconv.Atof64(qVal); err != nil && len(qVal) > 0 {
+			if qnum, err := strconv.ParseFloat(qVal, 64); err != nil && len(qVal) > 0 {
 				quality = qnum
 			} else {
 				// Default to 1.0 quality when not specified
@@ -136,12 +136,7 @@ var CompressionPipe Pipe = func(conn *Conn, req *http.Request) bool {
 
 // Perform unconditional 'gzip' compression of the content stream
 var GzipFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser, writer io.WriteCloser) bool {
-	zipw, err := gzip.NewWriter(writer)
-
-	if err != nil {
-		conn.HTTPStatusResponse(http.StatusInternalServerError)
-		return true
-	}
+	zipw := gzip.NewWriter(writer)
 
 	conn.SetHeader("Content-Encoding", "gzip")
 	go func() {
@@ -156,7 +151,11 @@ var GzipFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser
 
 // Perform unconditional 'flate' compression of the content stream
 var FlateFilter Filter = func(conn *Conn, req *http.Request, reader io.ReadCloser, writer io.WriteCloser) bool {
-	zipw := flate.NewWriter(writer, flate.DefaultCompression)
+	zipw, err := flate.NewWriter(writer, flate.DefaultCompression)
+	if err != nil {
+		conn.HTTPStatusResponse(http.StatusInternalServerError)
+		return true
+	}
 
 	conn.SetHeader("Content-Encoding", "deflate")
 	go func() {
